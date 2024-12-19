@@ -69,7 +69,7 @@ void    ft_ping(const char* target, int verbose)
     icmp_packet->icmp_code = 0;
     icmp_packet->icmp_cksum = 0;
     icmp_packet->icmp_id = getpid();
-    icmp_packet->icmp_seq = 1;
+    icmp_packet->icmp_seq = 5;
     icmp_packet->icmp_cksum = checksum((unsigned short *)packet, sizeof(packet));
 
     // send packet
