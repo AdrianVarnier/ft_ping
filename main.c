@@ -27,7 +27,10 @@ int main(int argc, char** argv)
             return (0);
         }
         else
-            ft_ping(argv[i], verbose);
+        {
+            while (1)
+                ft_ping(argv[i], verbose);
+        }
     }
     return (0);
 }
