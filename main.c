@@ -29,7 +29,10 @@ int main(int argc, char** argv)
         else
         {
             while (1)
+            {
                 ft_ping(argv[i], verbose);
+                sleep(1);
+            }
         }
     }
     return (0);
