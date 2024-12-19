@@ -31,7 +31,7 @@ int main(int argc, char** argv)
             while (1)
             {
                 ft_ping(argv[i], verbose);
-                sleep(1);
+                sleep(1000);
             }
         }
     }
