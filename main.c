@@ -17,6 +17,7 @@ int main(int argc, char** argv)
         return (1);
     }
     int verbose = 0;
+    int seq = 1;
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "-v") == 0)
@@ -30,7 +31,8 @@ int main(int argc, char** argv)
         {
             while (1)
             {
-                ft_ping(argv[i], verbose);
+                ft_ping(argv[i], verbose, seq);
+                seq++;
                 sleep(1);
             }
         }

@@ -42,7 +42,7 @@ void print_icmp_reply(char *reply, int bytes_received, struct sockaddr_in *reply
            rtt);
 }
 
-void    ft_ping(const char* target, int verbose)
+void    ft_ping(const char* target, int verbose, int seq)
 {
     // check target
     struct sockaddr_in addr;
@@ -69,7 +69,7 @@ void    ft_ping(const char* target, int verbose)
     icmp_packet->icmp_code = 0;
     icmp_packet->icmp_cksum = 0;
     icmp_packet->icmp_id = getpid();
-    icmp_packet->icmp_seq = 5;
+    icmp_packet->icmp_seq = seq;
     icmp_packet->icmp_cksum = checksum((unsigned short *)packet, sizeof(packet));
 
     // send packet
