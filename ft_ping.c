@@ -86,8 +86,8 @@ void    ft_ping(const char* target, int verbose)
     char reply[1024];
     struct sockaddr_in reply_addr;
     socklen_t addr_len = sizeof(reply_addr);
-    int bytes_receives = recvfrom(sockfd, reply, sizeof(reply), 0, (struct sockaddr *) &reply_addr, &addr_len);
-    if (bytes_receives <= 0)
+    int bytes_received = recvfrom(sockfd, reply, sizeof(reply), 0, (struct sockaddr *) &reply_addr, &addr_len);
+    if (bytes_received <= 0)
     {
         perror("recvfrom");
     }
