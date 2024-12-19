@@ -12,4 +12,6 @@
 #include <errno.h>
 #include <time.h>
 
+void    ft_ping(const char* target, int verbose);
+
 #endif

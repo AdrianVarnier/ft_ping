@@ -13,7 +13,7 @@ unsigned short checksum(unsigned short* ptr, int bytes)
     return (~sum);
 }
 
-void    ft_ping(const char* target, int option)
+void    ft_ping(const char* target, int verbose)
 {
     // check target
     struct sockaddr_in addr;
@@ -53,12 +53,16 @@ void    ft_ping(const char* target, int option)
 
     // receive reply
     char reply[1024];
+    struct sockaddr_in reply_addr;
+    socklen_t addr_len = sizeof(reply_addr);
     if (recvfrom(sockfd, reply, sizeof(reply), 0, (struct sockaddr *) &reply_addr, &addr_len) <= 0)
     {
         perror("recvfrom");
     }
-    else if (option)
+    else
     {
+        if (verbose)
+            printf("verbose\n");
         printf("Received ICMP reply from %s\n", inet_ntoa(reply_addr.sin_addr));
     }
 
