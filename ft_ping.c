@@ -1,5 +1,7 @@
 #include "ft_ping.h"
 
+static int seq;
+
 uint16_t checksum(void *ptr, int len)
 {
     uint16_t* data = ptr;
@@ -13,22 +15,33 @@ uint16_t checksum(void *ptr, int len)
     return ~sum;
 }
 
+void    set_header(struct icmphdr* icmp)
+{
+    memset(icmp, 0, sizeof(struct icmphdr));
+    icmp->type = ICMP_ECHO;
+    icmp->code = 0;
+    icmp->un.echo.id = getpid() & 0xFFFF;
+    icmp->un.echo.sequence = seq++;
+    icmp->checksum = checksum(icmp, sizeof(struct icmphdr));
+}
+
 int    send_ping(char* arg)
 {
-    struct sockaddr_in addr;
-    struct hostent *he = gethostbyname(arg);
-    memcpy(&addr.sin_addr, he->h_addr, he->h_length);
-
-    static int seq = 0;
-    struct icmphdr icmp;
-    memset(&icmp, 0, sizeof(icmp));
-    icmp.type = ICMP_ECHO;
-    icmp.code = 0;
-    icmp.un.echo.id = getpid() & 0xFFFF;
-    icmp.un.echo.sequence = seq++;
-    icmp.checksum = 0;
-    icmp.checksum = checksum(&icmp, sizeof(icmp));
+    struct addrinfo* res;
+    struct addrinfo  hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_RAW;
+    hints.ai_protocol = IPPROTO_ICMP;
+    if (getaddrinfo(arg, NULL, &hints, &res) != 0)
+    {
+        fprintf(stderr, "ft_ping: unknow host\n");
+        return -1;
+    }
     
+    struct icmphdr icmp;
+    set_header(&icmp);
+
     char buffer[PACKET_SIZE];
     memset(buffer, 0, PACKET_SIZE);
     memcpy(buffer, &icmp, sizeof(icmp));
@@ -36,15 +49,17 @@ int    send_ping(char* arg)
     int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sockfd < 0)
         return 1;
+
     struct timeval start, end;
     gettimeofday(&start, NULL);
-    if (sendto(sockfd, buffer, sizeof(icmp), 0, (struct sockaddr *)&addr, sizeof(addr)) < 0 )
+    if (sendto(sockfd, buffer, sizeof(icmp), 0, res->ai_addr, res->ai_addrlen) < 0 )
     {
         close(sockfd);
         return 1;
     }
-    socklen_t len = sizeof(addr);
-    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&addr, &len) <= 0)
+
+    socklen_t recv_len = res->ai_addrlen;
+    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, res->ai_addr, &res->ai_addrlen) <= 0)
     {
         close(sockfd);
         return 1;
@@ -57,7 +72,8 @@ int    send_ping(char* arg)
 
 int main(int argc, char** argv)
 {
+    seq = 0;
     send_ping(argv[1]);
-    send_ping(argv[1]);
+
     return 0;
 }
