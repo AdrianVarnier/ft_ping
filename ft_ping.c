@@ -1,7 +1,5 @@
 #include "ft_ping.h"
 
-static int seq;
-
 uint16_t checksum(void *ptr, int len)
 {
     uint16_t* data = ptr;
@@ -15,65 +13,97 @@ uint16_t checksum(void *ptr, int len)
     return ~sum;
 }
 
-void    set_header(struct icmphdr* icmp)
+void    set_echo_header(t_data* data)
 {
-    memset(icmp, 0, sizeof(struct icmphdr));
-    icmp->type = ICMP_ECHO;
-    icmp->code = 0;
-    icmp->un.echo.id = getpid() & 0xFFFF;
-    icmp->un.echo.sequence = seq++;
-    icmp->checksum = checksum(icmp, sizeof(struct icmphdr));
+    data->header.type = ICMP_ECHO;
+    data->header.code = 0;
+    data->header.un.echo.id = getpid() & 0xFFFF;
+    data->header.un.echo.sequence = 0;
+    data->header.checksum = checksum(&data->header, sizeof(struct icmphdr));
 }
 
-int    send_ping(char* arg)
+void    set_addr_hint(t_data* data)
 {
-    struct addrinfo* res;
-    struct addrinfo  hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_RAW;
-    hints.ai_protocol = IPPROTO_ICMP;
-    if (getaddrinfo(arg, NULL, &hints, &res) != 0)
+    data->hints.ai_family = AF_INET;
+    data->hints.ai_socktype = SOCK_RAW;
+    data->hints.ai_protocol = IPPROTO_ICMP;
+}
+
+void    fill_buffer(t_data *data)
+{
+    memcpy(data->buffer, &data->header, sizeof(struct icmphdr));
+}
+
+void    increment_seq(t_data* data)
+{
+    data->header.un.echo.sequence = 0;
+    data->header.checksum = checksum(&data->header, sizeof(struct icmphdr));
+    fill_buffer(data);  
+}
+
+void    init_data(t_data* data)
+{
+    memset(data, 0, sizeof(t_data));
+    set_echo_header(data);
+    set_addr_hint(data);
+    fill_buffer(data);
+}
+
+int     resolve_addr(t_data* data, char* addr)
+{
+    if (getaddrinfo(addr, NULL, &data->hints, &data->res) != 0)
     {
         fprintf(stderr, "ft_ping: unknow host\n");
         return -1;
     }
-    
-    struct icmphdr icmp;
-    set_header(&icmp);
+    return 0;
+}
 
-    char buffer[PACKET_SIZE];
-    memset(buffer, 0, PACKET_SIZE);
-    memcpy(buffer, &icmp, sizeof(icmp));
- 
+int    send_ping(t_data* data)
+{
     int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sockfd < 0)
         return 1;
-
     struct timeval start, end;
     gettimeofday(&start, NULL);
-    if (sendto(sockfd, buffer, sizeof(icmp), 0, res->ai_addr, res->ai_addrlen) < 0 )
+    if (sendto(sockfd, data->buffer, sizeof(struct icmphdr), 0, data->res->ai_addr, data->res->ai_addrlen) < 0)
     {
         close(sockfd);
         return 1;
     }
-
-    socklen_t recv_len = res->ai_addrlen;
-    if (recvfrom(sockfd, buffer, sizeof(buffer), 0, res->ai_addr, &res->ai_addrlen) <= 0)
+    socklen_t recv_len = data->res->ai_addrlen;
+    if (recvfrom(sockfd, data->buffer, sizeof(data->buffer), 0, data->res->ai_addr, &data->res->ai_addrlen) <= 0)
     {
         close(sockfd);
         return 1;
     }
     gettimeofday(&end, NULL);
-    double rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-    printf("ping %d %.3f\n", seq, rtt);
+    data->ttl = ((struct ip *)data->buffer)->ip_ttl;
+    data->rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
     return 0;
+}
+
+void    display_dest_info(t_data *data, char* arg)
+{
+    char ip[INET_ADDRSTRLEN];
+    inet_ntop(data->res->ai_family, (struct sockaddr_in *)data->res->ai_addr, ip, sizeof(ip));
+    printf("PING %s (%s)\n", arg, ip);
+}
+
+void    display_ping_info(t_data *data)
+{
+    printf("icmp_seq=%d ttl=%d time=%.3f ms\n", data->seq, data->ttl, data->rtt);
 }
 
 int main(int argc, char** argv)
 {
-    seq = 0;
-    send_ping(argv[1]);
-
+    t_data data;
+    init_data(&data);
+    if (resolve_addr(&data, argv[1]) < 0)
+        return 1;
+    int ret = send_ping(&data);
+    display_dest_info(&data, argv[1]);
+    display_ping_info(&data);
+    printf("%d\n", ret);
     return 0;
 }

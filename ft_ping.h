@@ -15,4 +15,15 @@
 
 #define PACKET_SIZE 64
 
+typedef struct s_data
+{
+    char            buffer[PACKET_SIZE];
+    struct icmphdr  header;
+    struct addrinfo *res;
+    struct addrinfo hints;
+    int             seq;
+    int             ttl;
+    double          rtt;
+}              t_data;
+
 #endif
