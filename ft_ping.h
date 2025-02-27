@@ -12,18 +12,43 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <math.h>
 
-#define PACKET_SIZE 64
+#define ICMP_HEADER_SIZE 8
+#define PAYLOAD_SIZE 56
+#define PACKET_SIZE PAYLOAD_SIZE + ICMP_HEADER_SIZE
+#define IP_HEADER_SIZE 20
+
+typedef struct s_icmp_packet
+{
+    struct icmphdr  header;
+    char            payload[PAYLOAD_SIZE];
+} t_icmp_packet;
 
 typedef struct s_data
 {
-    char            buffer[PACKET_SIZE];
-    struct icmphdr  header;
+    // request parameters
+    t_icmp_packet   packet;
+    char            response[PACKET_SIZE + IP_HEADER_SIZE];
+    char            ip[INET_ADDRSTRLEN];
     struct addrinfo *res;
     struct addrinfo hints;
+    int             sockfd;
+    int             v;
+
+    // statistics
     int             seq;
     int             ttl;
     double          rtt;
+    int             rtt_count;
+    double          rtt_min;
+    double          rtt_max;
+    double          rtt_sum;
+    double          rtt_sqr_sum;
+    ssize_t         bytes_received;
+    int             errors;
 }              t_data;
 
 #endif
