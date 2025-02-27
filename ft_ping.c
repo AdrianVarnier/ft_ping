@@ -46,10 +46,11 @@ void    init_data(t_data* data)
     if ((data->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0)
         exit(1);
     setsockopt(data->sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
-    struct timeval timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
-    setsockopt(data->sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    data->timeout.tv_sec = TIMEOUT_S;
+    data->timeout.tv_usec = TIMEOUT_MS;
+    setsockopt(data->sockfd, SOL_SOCKET, SO_RCVTIMEO, &data->timeout, sizeof(data->timeout));
+    data->ttl_max = TTL_MAX;
+    setsockopt(data->sockfd, IPPROTO_IP, IP_TTL, &data->ttl_max, sizeof(data->ttl_max));
 }
 
 void    display_dest_info(t_data *data, char* arg)
@@ -71,7 +72,9 @@ void display_stats(t_data *data)
 {
     double mean = data->rtt_sum / data->rtt_count;
     double stddev = sqrt((data->rtt_sqr_sum / data->rtt_count) - pow(mean, 2));
-    int loss = 100 - (data->rtt_count / (data->seq + 1)) * 100;
+    int loss = 100 - ((data->rtt_count + data->errors) /(data->seq + 1)) * 100;
+    if (loss == 100)
+        mean = stddev = 0;
     printf("--- ft_ping statistics ---\n");
     printf("%d packets transmitted, %d packets received, %d%% packet loss\n", data->rtt_count + data->errors, data->rtt_count, loss);
     printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n", data->rtt_min, mean, data->rtt_max, stddev);
@@ -88,10 +91,10 @@ void    update_rtt(t_data* data)
         data->rtt_max = data->rtt;   
 }
 
-void    handle_response(t_data* data)
+void    handle_response(t_data* data, int ret)
 {
     struct icmphdr *response = (struct icmphdr *)(data->response + (((struct ip *)data->response)->ip_hl * 4));
-    if (response->type == ICMP_ECHOREPLY)
+    if (response->type == ICMP_ECHOREPLY && ret != -1)
     {
         update_rtt(data);
         display_ping_info(data);
@@ -136,12 +139,12 @@ int    send_ping(t_data* data)
     struct timeval start, end;
     gettimeofday(&start, NULL);
     if (sendto(data->sockfd, &data->packet, sizeof(data->packet), 0, data->res->ai_addr, data->res->ai_addrlen) < 0)
-        exit_clean(1);
+        return -1;
     struct sockaddr_in sender_addr;
     socklen_t sender_len = sizeof(sender_addr);
     memset(&data->response, 0, sizeof(data->response));
     if ((data->bytes_received = recvfrom(data->sockfd, data->response, PACKET_SIZE + IP_HEADER_SIZE, 0, (struct sockaddr*)&sender_addr, &sender_len)) <= 0)
-        exit_clean(1);
+        return -1;
     gettimeofday(&end, NULL);
     data->ttl = ((struct ip *)data->response)->ip_ttl;
     data->rtt = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
@@ -160,14 +163,18 @@ int     resolve_addr(t_data* data, char* addr)
 
 int     main(int argc, char** argv)
 {
+    int ret = 0;
+
     signal(SIGINT, handle_sigint);
     init_data(&data);
+    if (argc > 2 && strcmp(argv[2], "-v") == 0)
+        data.v = 1;
     resolve_addr(&data, argv[1]);
     display_dest_info(&data, argv[1]);
     while (1)
     {
-        send_ping(&data);
-        handle_response(&data);
+        ret = send_ping(&data);
+        handle_response(&data, ret);
         update_packet(&data);
         sleep(1);
     }

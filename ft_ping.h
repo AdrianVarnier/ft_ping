@@ -20,6 +20,9 @@
 #define PAYLOAD_SIZE 56
 #define PACKET_SIZE PAYLOAD_SIZE + ICMP_HEADER_SIZE
 #define IP_HEADER_SIZE 20
+#define TIMEOUT_S 1
+#define TIMEOUT_MS 0
+#define TTL_MAX 1
 
 typedef struct s_icmp_packet
 {
@@ -37,6 +40,8 @@ typedef struct s_data
     struct addrinfo hints;
     int             sockfd;
     int             v;
+    struct timeval  timeout;
+    int             ttl_max;
 
     // statistics
     int             seq;
