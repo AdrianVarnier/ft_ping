@@ -22,7 +22,7 @@
 #define IP_HEADER_SIZE 20
 #define TIMEOUT_S 1
 #define TIMEOUT_MS 0
-#define TTL_MAX 1
+#define TTL_MAX 128
 
 typedef struct s_icmp_packet
 {
@@ -39,7 +39,11 @@ typedef struct s_data
     struct addrinfo *res;
     struct addrinfo hints;
     int             sockfd;
+
+    // flags
     int             v;
+    int             q;
+    int             t;
     struct timeval  timeout;
     int             ttl_max;
 
@@ -55,5 +59,33 @@ typedef struct s_data
     ssize_t         bytes_received;
     int             errors;
 }              t_data;
+
+// diplay.c
+void        display_dest_info(t_data *data, char* arg);
+void        display_ping_info(t_data *data);
+void        display_stats(t_data *data);
+void        display_help(void);
+
+// packet.c
+uint16_t    checksum(void *ptr, int len);
+void        set_echo_header(t_data* data);
+void        update_packet(t_data *data);
+
+// exit.c
+void        free_data(t_data *data);
+void        exit_clean(int n);
+void        handle_sigint(int sig);
+
+// network
+void        set_addr_hint(t_data* data);
+int         resolve_addr(t_data* data, char* addr);
+
+// ft_ping.c
+int         send_ping(t_data* data);
+void        handle_response(t_data* data, int ret);
+void        update_rtt(t_data* data);
+
+// parsing.c
+void    parse(int argc, char** argv, t_data* data);
 
 #endif
