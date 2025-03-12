@@ -2,7 +2,8 @@
 
 void    display_dest_info(t_data *data, char* arg)
 {
-    inet_ntop(data->res->ai_family, (struct sockaddr_in *)data->res->ai_addr, data->ip, sizeof(data->ip));
+    struct sockaddr_in *addr_in = (struct sockaddr_in *)data->res->ai_addr;
+    inet_ntop(AF_INET, &addr_in->sin_addr, data->ip, sizeof(data->ip));
     printf("PING %s (%s): %d bytes", arg, data->ip, PACKET_SIZE - 8);
     if (data->v)
         printf(", id %x = %d", data->packet.header.un.echo.id, data->packet.header.un.echo.id);

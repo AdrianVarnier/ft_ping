@@ -35,5 +35,4 @@ void    parse(int argc, char** argv, t_data* data)
         if (flag == 't' && (i + 1 < argc - 1))
             data->ttl_max = atoi(argv[++i]);
     }
-    printf("t=%d, v=%d, q=%d\n", data->t, data->v, data->q);
 }
