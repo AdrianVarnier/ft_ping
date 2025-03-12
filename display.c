@@ -23,7 +23,7 @@ void display_stats(t_data *data)
     int loss = 100 - (((data->seq + 1) - data->errors) /(data->seq + 1)) * 100;
     if (loss == 100)
         mean = stddev = 0;
-    printf("--- ft_ping statistics ---\n");
+    printf("\n--- ft_ping statistics ---\n");
     printf("%d packets transmitted, %d packets received, %d%% packet loss\n", data->rtt_count + data->errors, data->rtt_count, loss);
     printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n", data->rtt_min, mean, data->rtt_max, stddev);
 }
